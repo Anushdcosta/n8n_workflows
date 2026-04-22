@@ -1,0 +1,1080 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -2144,
+        -624
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.content }}",
+                    "rightValue": "Monitor Child Progress",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "47088353-adeb-4d4e-82f4-08636754aae5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ebe835d8-6420-4ccb-8fc1-6746f58b10f1",
+                    "leftValue": "={{ $json.body.content }}",
+                    "rightValue": "Get Parental Advice",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8e698447-0e56-4933-a4fc-758bb131fa15",
+                    "leftValue": "={{ $json.body.content }}",
+                    "rightValue": "Modify off times",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6cf5f6a7-6ed7-4e70-954e-b22ca3690488",
+                    "leftValue": "={{ $json.body.content }}",
+                    "rightValue": "Monitor tasks",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "742c2a97-aec9-4286-9faa-d470d6c22c32",
+                    "leftValue": "={{ $json.body.content }}",
+                    "rightValue": "other",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "fallbackOutput": "extra",
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1920,
+        -688
+      ],
+      "id": "38df84a5-2ce8-4fc4-a920-2c77328eab6f",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "ParentConvo"
+            },
+            {
+              "name": "msg",
+              "value": "=What would you like to do today?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1312,
+        128
+      ],
+      "id": "33898ad9-3c86-4b2d-98b5-bb774d3ff48c",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "update_offtimes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2288,
+        560
+      ],
+      "id": "a1a039a5-9dad-41d9-9b1f-6cb1dd3a45d6",
+      "name": "Webhook",
+      "webhookId": "ec12dd9d-7733-46c4-a64a-50326db974ff"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1616,
+        464
+      ],
+      "id": "1a6eb1d3-360a-42c6-8400-33a000fa0055",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d117c2b8-60a5-45fe-967c-e30652f1b158",
+              "leftValue": "={{ $json.body.status }}",
+              "rightValue": "=1",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2064,
+        560
+      ],
+      "id": "1e31ca02-4b63-4f6d-9505-891a9fb33352",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "table": {
+          "__rl": true,
+          "value": "agent_schedule_rules",
+          "mode": "list",
+          "cachedResultName": "agent_schedule_rules"
+        },
+        "deleteCommand": "delete",
+        "where": {
+          "values": [
+            {
+              "column": "day_type",
+              "value": "={{ $json.body.day_type }}"
+            },
+            {
+              "column": "hour_of_day",
+              "value": "={{ $json.body.hour_of_day }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1840,
+        464
+      ],
+      "id": "717aab42-e8ec-428a-b21a-3e7ec9a965ce",
+      "name": "Delete table or rows",
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1616,
+        656
+      ],
+      "id": "59c479c3-459f-4d3d-9958-ea6e31b91040",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "value": "agent_schedule_rules",
+          "mode": "list",
+          "cachedResultName": "agent_schedule_rules"
+        },
+        "dataMode": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "day_type",
+              "value": "={{ $('Webhook').item.json.body.day_type }}"
+            },
+            {
+              "column": "hour_of_day",
+              "value": "={{ $('Webhook').item.json.body.hour_of_day }}"
+            },
+            {
+              "column": "status",
+              "value": "OFF"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1840,
+        656
+      ],
+      "id": "75d53f98-8c01-48ba-977f-50c44f8efdf5",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "student_schedule",
+          "mode": "list",
+          "cachedResultName": "student_schedule"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1312,
+        -1296
+      ],
+      "id": "59bc4fb1-ac34-4b65-af8f-eec697d9901e",
+      "name": "Select rows from a table1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Define the target date (Yesterday)\nconst yesterday = $now.minus({ days: 1 });\nconst targetDateStr = yesterday.toFormat(\"yyyy-MM-dd\");\n\nlet completed = 0;\nlet notcompleted = 0;\nlet missedTask = 0;\nlet tasks = [];\n\nfor (const item of $input.first().json.data) {\n  // 2. Filter for tasks matching yesterday's date\n  if (item.task_date === targetDateStr) {\n    tasks.push(item);\n\n    if (item.is_completed === 1) {\n      completed = completed + 1;\n    } else {\n      const dateTimeString = item.start_time;\n      const dateObject = new Date(dateTimeString.replace(' ', 'T')); \n      const taskHour = dateObject.getHours();\n      \n      // 3. Logic for previous day tasks:\n      // Since it is now \"today,\" any task from \"yesterday\" that \n      // wasn't completed is technically \"Missed.\"\n      missedTask = missedTask + 1;\n    }\n  }\n}\n\nreturn { \n  targetDate: targetDateStr, \n  tasks, \n  completed, \n  notcompleted, \n  missedTask \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        -1296
+      ],
+      "id": "697aef08-a311-4a27-a357-69c602b3fa8b",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        -1296
+      ],
+      "id": "054c3db1-cee8-4d58-91b0-6d7161f7542a",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5149b503-efdf-4b70-9de4-627cf2ea7d03",
+              "leftValue": "={{ $json.completed }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "88ce2d6e-06af-4da2-9b34-f9b6f64a7243",
+              "leftValue": "={{ $json.notcompleted }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "f05a37ea-93bd-4e55-8953-b7aa8aa98a22",
+              "leftValue": "={{ $json.missedTask }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -576,
+        -1296
+      ],
+      "id": "809e76a8-72c0-4463-9656-b614551bcade",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "conversation"
+            },
+            {
+              "name": "msg",
+              "value": "There are no tasks assigned for today"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -288,
+        -1392
+      ],
+      "id": "332df1da-4d6b-4b02-b46d-e9adf304ea14",
+      "name": "HTTP Request4",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "graph"
+            },
+            {
+              "name": "msg",
+              "value": "Here is a graph of the progress of the child."
+            },
+            {
+              "name": "graphdets",
+              "value": "=Completed: {{ $json.completed }}, Not Completed: {{ $json.notcompleted }}, Missed: {{ $json.missedTask }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -288,
+        -1104
+      ],
+      "id": "f808c1b7-d726-4341-adce-2d0277002071",
+      "name": "HTTP Request5",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "student_schedule",
+          "mode": "list",
+          "cachedResultName": "student_schedule"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1312,
+        -304
+      ],
+      "id": "e5cb2684-214d-4d03-9d7a-76519090d2ab",
+      "name": "Select rows from a table2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const todaystask = []\n\nfor (const item of $input.first().json.data) {\n  if (item.task_date === $now.toFormat(\"yyyy-MM-dd\")) {\n    if (item.is_completed === 1) {\n      item.status = \"completed\"\n    } else {\n      const dateTimeString = item.start_time\n      const dateObject = new Date(dateTimeString.replace(' ', 'T')); \n      const hour = dateObject.getHours();\n      const enddateTimeString = item.end_time\n      const enddateObject = new Date(enddateTimeString.replace(' ', 'T')); \n      const endhour = enddateObject.getHours();\n      const datenow = new Date($now);\n      console.log(hour, datenow.getUTCHours() + 4)\n      if ( datenow.getHours() + 4 >= endhour) {\n        item.status = \"Missed Task\"\n      } else if ( datenow.getHours() < hour) {\n        item.status = \"Not completed\"\n      }\n    }\n    todaystask.push(item)\n  }\n}\n\nreturn { todaystask }"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        -304
+      ],
+      "id": "92af0241-c247-433e-95a6-3cee3e9f66d6",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        -304
+      ],
+      "id": "c18ffa92-b78f-453a-a9c2-9a555ff2cdd5",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5149b503-efdf-4b70-9de4-627cf2ea7d03",
+              "leftValue": "={{ $json.todaystask.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -576,
+        -304
+      ],
+      "id": "a0567b2c-c82a-4ed4-866a-151e49ebd47e",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "tasks"
+            },
+            {
+              "name": "msg",
+              "value": "The tasks assigned for today."
+            },
+            {
+              "name": "tasks",
+              "value": "={{ $json.todaystask }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -320,
+        -304
+      ],
+      "id": "c5aafa22-9b3f-42e8-bcaf-515b8b4cae9a",
+      "name": "HTTP Request6",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "ParentConvo"
+            },
+            {
+              "name": "msg",
+              "value": "There are no tasks assigned for today"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -320,
+        -144
+      ],
+      "id": "5e9bc5a4-828f-4159-ad9f-679d1ec26c7d",
+      "name": "HTTP Request7",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "parent"
+            },
+            {
+              "name": "msg",
+              "value": "How can I help you today?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1264,
+        -848
+      ],
+      "id": "e2208834-5336-4b82-9f89-e6de2f0027e0",
+      "name": "HTTP Request8",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "content": "# Monitor Child Progress",
+        "height": 576,
+        "width": 1264
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1376,
+        -1520
+      ],
+      "typeVersion": 1,
+      "id": "bcc5f658-2de6-4228-b6b6-cf266d451d36",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Get Parental Advice",
+        "height": 208,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1376,
+        -896
+      ],
+      "typeVersion": 1,
+      "id": "81a87ffc-9878-4a2d-9005-95b4fc479cc4",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Modify Off Times",
+        "height": 208,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1376,
+        -640
+      ],
+      "typeVersion": 1,
+      "id": "3f9b5d69-b020-470a-989f-38187b7e26ea",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "offtimemodify"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1264,
+        -592
+      ],
+      "id": "929f6467-d3ac-4875-957e-e0e31f0a29aa",
+      "name": "HTTP Request3",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "content": "# Monitor Tasks",
+        "height": 400,
+        "width": 1280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1376,
+        -368
+      ],
+      "typeVersion": 1,
+      "id": "e680f917-c91e-479e-a3bb-3d6fda69eddd",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Other",
+        "height": 208,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1376,
+        80
+      ],
+      "typeVersion": 1,
+      "id": "586f4b67-c043-4997-9ae4-fd0ec18ed326",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "# Update Off Times",
+        "height": 432,
+        "width": 928
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2336,
+        416
+      ],
+      "typeVersion": 1,
+      "id": "28f63ba9-fbd0-4ae8-b938-03389255090f",
+      "name": "Sticky Note6"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Select rows from a table2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Delete table or rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete table or rows": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table2": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "headers": {
+          "content-type": "application/json",
+          "content-length": "238",
+          "host": "100.104.205.24:5678",
+          "connection": "Keep-Alive",
+          "accept-encoding": "gzip",
+          "user-agent": "okhttp/4.12.0"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "content": "Monitor tasks",
+          "phone": true,
+          "settings": {
+            "id": 1,
+            "student_name": "Anush Dcosta",
+            "current_mode": "Parent",
+            "support_level": 0,
+            "age_group": 20,
+            "led_brightness": 100,
+            "adhd_type": 0,
+            "DOB": "2006-01-15"
+          },
+          "parent_mode": true,
+          "lock_mode": false
+        },
+        "webhookUrl": "http://localhost:5678/webhook/thought_dump",
+        "executionMode": "production"
+      }
+    ],
+    "Webhook": [
+      {
+        "headers": {
+          "content-type": "application/json",
+          "content-length": "50",
+          "host": "100.104.205.24:5678",
+          "connection": "Keep-Alive",
+          "accept-encoding": "gzip",
+          "user-agent": "okhttp/4.12.0"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "day_type": "Weekday",
+          "hour_of_day": 14,
+          "status": 1
+        },
+        "webhookUrl": "http://100.104.205.24:5678/webhook/update_offtimes",
+        "executionMode": "production"
+      }
+    ],
+    "Code in JavaScript2": [
+      {
+        "targetDate": "2026-04-07",
+        "tasks": [],
+        "completed": 2,
+        "notcompleted": 4,
+        "missedTask": 2
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a23527dc3c25acf1a0aa7850f9775ecca4d70743200cf35dd3ef15e47337d026"
+  }
+}
