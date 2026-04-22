@@ -1,0 +1,3732 @@
+{
+  "name": "Main_Workflow copy",
+  "nodes": [
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('overall_output').item.json.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -4784,
+        -3552
+      ],
+      "id": "d5d533aa-0a20-4589-89b6-e6a784e24fec",
+      "name": "Postgres Chat Memory1",
+      "credentials": {
+        "postgres": {
+          "id": "D6RItCzHbtXzIf42",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('overall_output').first().json.sessionId }}",
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -7024,
+        -2896
+      ],
+      "id": "e0fefa62-cf2a-44c4-a5e3-0da098a4df56",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "D6RItCzHbtXzIf42",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -4864,
+        -3376
+      ],
+      "id": "9dac5408-9a30-4c0d-9e44-b5ef645d0f0c",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "thought_dump",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -10320,
+        -2064
+      ],
+      "id": "f4bafd42-f16e-46a2-a70a-f76ee6d3f965",
+      "name": "Webhook",
+      "webhookId": "6f00e6c4-40fe-4ea2-bfb0-ccf2c5c6e576"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7344,
+        -3312
+      ],
+      "id": "00d2c4a2-8569-4e1a-963c-009fe1f5842c",
+      "name": "overall_output"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "49160c75-3dda-49a3-b4f3-506c3e9a2384",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "[RESPONSE]",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -9760,
+        -1840
+      ],
+      "id": "a0e8e4c0-79f9-4a61-b73c-c99480c8fbc8",
+      "name": "Check_for_Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const substringToRemove = \"[RESPONSE]\";\n\n$input.first().json.body.content = $input.first().json.body.content.replace(substringToRemove, '');\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8064,
+        -3488
+      ],
+      "id": "7060d0d7-1a93-4ad2-adce-5da2ecd08e13",
+      "name": "Remove_substring"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sessionId = Math.random().toString(36).slice(2)\n$input.first().json.body.sessionId = sessionId\nreturn $input.first().json.body;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7520,
+        -3136
+      ],
+      "id": "21544467-9ce1-4276-a026-af9474a81ccc",
+      "name": "Return_body_2"
+    },
+    {
+      "parameters": {
+        "jsCode": "let new_item = \"\"\nfor (const item of $input.all()) {\n  if (item.json.message.type === \"human\") {\n    if (!item.json.message.content.includes(\"[READY]\")) {\n      new_item = new_item + \" \" + item.json.message.content;\n    }\n  } else {\n    continue;\n  }\n}\nnew_item = new_item + \". \" + $('Remove_substring').first().json.body.content\n\n$('Remove_substring').first().json.body.content = new_item.replaceAll(\"completed\", \"to complete\")\n\nreturn $('Remove_substring').first().json.body"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7552,
+        -3488
+      ],
+      "id": "f7e1637e-892f-4cca-be61-e52f937516f9",
+      "name": "Return_body_1"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {
+          "temperature": 0,
+          "keepAlive": "168h",
+          "numCtx": 2048,
+          "numPredict": 30
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        -8336,
+        -1936
+      ],
+      "id": "0994dff9-4998-43c2-9a99-486fc82cc55e",
+      "name": "Llama3.2 model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "[EXTEND]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -8016,
+        -2208
+      ],
+      "id": "9c1ad7a2-f7c1-43bb-9416-1498c8859202",
+      "name": "Respond_Extenstion"
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $('Webhook').first().json.body.content }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "New Project Submission",
+              "description": "Use this for ANY text where a user describes a project, a task, or a report, even if they mention a deadline (e.g., \"completed in two days\"). If the intent is to submit or describe a new assignment, pick this."
+            },
+            {
+              "category": "Extension Request",
+              "description": "Use this ONLY if the user explicitly asks for more time, an extension, or a delay. Keywords: \"need more time,\" \"extra time,\" \"extend,\" \"postpone,\" or \"delayed.\""
+            },
+            {
+              "category": "Normal Chatting",
+              "description": "Use for greetings or general conversations unrelated to tasks. Example: \"How are you today?\" -> Normal Chatting"
+            },
+            {
+              "category": "Question",
+              "description": "Use for any sort of questions regarding general knowledge or questions about the world. Example: \"Who is the king of England\" or \"What is the type of leds used by machinery\"-> Question"
+            },
+            {
+              "category": "Reminder",
+              "description": "Use for any sort of reminders. Example: I have to put the stove off in 10 minutes"
+            }
+          ]
+        },
+        "options": {
+          "fallback": "other",
+          "systemPromptTemplate": "=You are a rigid text classifier. You must classify the user's input into exactly ONE of these categories: New Project Submission, Extension Request, Reminder, Normal Chatting or Question.\nAny sort of questions must be sent into the Question Branch\nOutput Requirements:\nYou MUST pick exactly one category.\nSet the chosen category to true and all others to false.\nOutput Requirement: Return ONLY the raw JSON object. Do NOT include markdown formatting, backticks, or any introductory or concluding text.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -8448,
+        -2208
+      ],
+      "id": "63bf6d58-acd6-41d4-89e2-be8770a09d8b",
+      "name": "Main_Classifier",
+      "alwaysOutputData": false,
+      "retryOnFail": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('overall_output').item.json.content }}",
+        "options": {
+          "systemMessage": "=You are a strict validation logic gate. You must identify a [SPECIFIC TASK] and a [TIME PERIOD].\n\n### VALIDATION RULES:\n1. A [SPECIFIC TASK] is present if the user provides a subject, even if it is a long description. To identify the task, look for the object of the preposition (e.g., the text following \"on\", \"about\", or \"regarding\"). As long as there is text describing what the project covers, the task is present.\n2. A [TIME PERIOD] is present if there is a duration or deadline (e.g., \"two weeks\", \"by Tuesday\"). If the user mentions completed, replace it with complete as in the task is not yet completed.\n\n### OUTPUT LOGIC:\n- If BOTH are present, you must output the exact 89-character string below, including the square brackets, and nothing else:\n[READY] I have all the details I need. I am going to make a step-by-step schedule now.\n\n- If the topic/action is missing (even if they say \"I have a project\"): Output ONLY \"Please provide the specific topic or goal for your project.\"\n\n- If the time period is missing: Output ONLY \"Please provide a time period or deadline for this project.\"\n\n### NEGATIVE CONSTRAINTS:\n- Do NOT assume \"project\" is the goal. \n- Do NOT provide any conversational filler or \"It looks like\" statements.\n- Output ONLY the required string.\n- While \"project\" or \"assignment\" are not topics, any text describing the subject of that project (e.g., \"3D printer elements\") satisfies the requirement for a [SPECIFIC TASK]."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -7120,
+        -3280
+      ],
+      "id": "a9bb6322-ce0d-4ba9-ad10-392906ef3fd3",
+      "name": "Project Identifier"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User input: {{ $('overall_output').item.json.content }}",
+        "options": {
+          "systemMessage": "=Role: Data Extraction Agent.\nTask: Identify the \"Task Name\" and \"Days to Deadline\" from {{ $('overall_output').item.json.content }}.\n\nStep 1: Extraction Logic\nTask Name Identification:\n\nSpecific Subject: Extract the core topic (e.g., \"Levels of Government in India\").\n\nInclude Scope: If the user provides a detailed description, extract the entire descriptive phrase as the task name.\n\nIgnore Generic Terms: Do NOT accept \"a project,\" \"the work,\" \"my assignment,\" or \"something\" as a task name. If only generic terms are found, set task name to \"MISSING\".\n\nDeadline Calculation:\n\nIdentify the timeframe provided.\n\nConversion Math: 1 Month = 30 Days | 1 Week = 7 Days.\n\nIf no timeframe is found, set days_to_deadline to null.\n\nStep 2: Strict Execution Rules\nMandatory JSON Output: Your entire response must be a single JSON object.\n\nNo Placeholders: Do NOT use the phrase \"Extracted Task Name.\" You must replace it with the actual data from the user's input.\n\nZero-Dialogue: Do not include any introductory text, markdown code blocks (```), or \"Note\" sections.\n\nStep 3: Required JSON Format\nJSON\n{\n  \"task_name\": \"[Insert Extracted Subject]\",\n  \"days_to_deadline\": [Insert Integer],\n  \"explain\": \"[Briefly state the conversion, e.g., '2 months = 60 days']\",\n  \"status\": \"[READY or INCOMPLETE]\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -4928,
+        -3776
+      ],
+      "id": "9600b2c7-2f07-452a-b433-b55410990343",
+      "name": "Scheduler Agent"
+    },
+    {
+      "parameters": {
+        "model": "mistral:latest",
+        "options": {
+          "temperature": 0,
+          "keepAlive": "5m",
+          "numCtx": 4096,
+          "useMMap": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -7152,
+        -2896
+      ],
+      "id": "b2b85f82-c1b3-4359-9d5a-174d67cf1a74",
+      "name": "Mistral_model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9eae33d9-89cd-4275-92ea-c27708eb9e96",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "[READY]",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -5152,
+        -3328
+      ],
+      "id": "0ece8ce8-e3d6-4ee5-b194-468f1cd93be6",
+      "name": "Check for Completion"
+    },
+    {
+      "parameters": {
+        "jsCode": "const substringToRemove = \"[READY]\";\n\n$input.first().json.output = $input.first().json.output.replace(substringToRemove, '').replaceAll(\"\\n\", \"\").replaceAll(\"\\\"\", \"\");\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4576,
+        -3184
+      ],
+      "id": "30088381-a4ae-4fc3-974d-32399a7aa92b",
+      "name": "Remove Special Chars"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2cef707-a863-4111-b67c-2d8bc36e69ea",
+              "name": "output",
+              "value": "={{ $json.output + \"[REQUEST]\" }}",
+              "type": "string"
+            },
+            {
+              "id": "dfd5fd1b-6c4e-4fbf-8926-ba5567d17fe3",
+              "name": "sessionId",
+              "value": "={{ $('overall_output').item.json.sessionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4864,
+        -2800
+      ],
+      "id": "90b0101f-8811-4130-aef8-a5bedf223b62",
+      "name": "Format Json"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -4352,
+        -3184
+      ],
+      "id": "c3f2d9af-3770-42e4-9c5a-b2232c407673",
+      "name": "Ready Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -4576,
+        -2800
+      ],
+      "id": "88de9a01-a635-44d0-bb97-0bff52d27f8d",
+      "name": "Request Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "21bfb69c-ee4e-4300-bf62-49b137e49163",
+              "leftValue": "={{ $('Project Identifier').item.json.output }}",
+              "rightValue": "[READY]",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -5152,
+        -3744
+      ],
+      "id": "62d315c1-1ad5-454a-9e50-7881f1d451b1",
+      "name": "Ready Checker"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {
+          "keepAlive": "5h",
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -4912,
+        -3552
+      ],
+      "id": "c49af322-3317-417b-be27-c4b1a5f2b300",
+      "name": "Llama3.2 model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "$input.first().json.response = $input.first().json.response.replaceAll(\"*\", \"\").replaceAll(\"\\\"\", \"\");\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6512,
+        -1456
+      ],
+      "id": "b9a464d8-b5aa-41af-a4df-2a90e1174422",
+      "name": "Response Cleaner"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.response }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -6256,
+        -1456
+      ],
+      "id": "c75fb288-86fa-4e4c-a393-9562fdc6bd7b",
+      "name": "Natural Response"
+    },
+    {
+      "parameters": {
+        "url": "http://searxng:8080/search?format=json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.body.content }} -site:wikipedia.org"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7248,
+        -2240
+      ],
+      "id": "1d27107c-512b-433e-b39d-973bd1da4972",
+      "name": "Web search"
+    },
+    {
+      "parameters": {
+        "jsCode": "$input.first().json.response = $input.first().json.response.replaceAll(\"*\", \"\").replaceAll(\"\\\"\", \"\");\n\nlet text = $input.first().json.response\n\nreturn { \"text\": text };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5712,
+        -2240
+      ],
+      "id": "f0a35273-17ad-4375-b633-5ef40fca3fe8",
+      "name": "Response Cleaner1"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.text}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -5424,
+        -2240
+      ],
+      "id": "af367344-24f6-43ea-b256-4dbc137d263c",
+      "name": "Answer user Questions"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Access the incoming search results\n// We use a fallback empty array to prevent \"undefined\" errors\nconst results = items[0].json.results || []; \n\n// 2. Optimized cleaning function\nconst cleanText = (text) => {\n  if (!text) return \"\";\n  return text\n    .replace(/<[^>]*>?/gm, '')    // Strip HTML tags\n    .replace(/[\\r\\n\\t]+/g, ' ')  // Replace newlines and tabs with a single space\n    .replace(/\\s\\s+/g, ' ')      // Collapse multiple spaces\n    .replace(/[^\\x20-\\x7E]/g, '') // Remove non-printable/special characters\n    .trim();\n};\n\nconst cleanedData = results.slice(0, 3).map(item => {\n  let title = (item.title || \"Source\").substring(0, 40);\n  let snippet = cleanText(item.content || item.snippet || \"\");\n  \n  const LIMIT = 500; // Increased slightly for better context\n  \n  if (snippet.length > LIMIT) {\n    // Find the last period before the limit to avoid cutting mid-sentence\n    const lastPeriod = snippet.lastIndexOf('.', LIMIT);\n    if (lastPeriod > 100) { // Only cut at period if it's not too short\n      snippet = snippet.substring(0, lastPeriod + 1);\n    } else {\n      snippet = snippet.substring(0, LIMIT) + \"...\";\n    }\n  }\n\n  return `[${title}]: ${snippet}`;\n});\n\nreturn [{\n  json: {\n    cleaned_search_context: cleanedData.join(' | ').replaceAll(\"\\\"\", \"\\'\")\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7024,
+        -2240
+      ],
+      "id": "60f0589a-3438-4158-a44c-4e3261d49504",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gemma3:1b\",\n  \"system\": \"You have NO prior knowledge outside of the provided context. If a user asks a question that cannot be answered strictly using the provided search results\",\n  \"prompt\": \"Current Date: {{ $now }}\\n\\nProvided Context: {{ $json.cleaned_search_context }}\\n\\nUser Question: {{ $('Main_Classifier').item.json.body.content }}\",\n  \"stream\": false,\n  \"options\": {\n    \"draft\": \"gemma3:270m\",\n    \"num_draft\": 5,\n    \"temperature\": 0,\n    \"num_ctx\": 4096\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -6800,
+        -2240
+      ],
+      "id": "3d4c0d0d-a71e-4766-aaba-d5cf0d452ae5",
+      "name": "Draft model"
+    },
+    {
+      "parameters": {
+        "model": "gemma3:270m",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -6512,
+        -2000
+      ],
+      "id": "78b923ca-e19e-4a20-8996-d462ee955089",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($(\"Decider\").first().json.output == \"PASS\\n\") {\n  return {\"text\": $('Draft model').first().json.response.replaceAll(\"\\n\", \"\")}\n} else {\n  return {\"text\":  \"I'm sorry, the search results didn't provide enough specific information to answer that accurately. Could you try rephrasing?\"}\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6224,
+        -2240
+      ],
+      "id": "4052a850-b56f-4d26-8960-73cbfe1918bb",
+      "name": "Code in JavaScript1",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gemma3:1b\",\n  \"system\": \"You are like a friend to the user. You never mention that you are an LLM. Answer in short responses.\",\n  \"prompt\": \"Current Date: {{ $now }}\\n\\n User Message: {{ $('Webhook').item.json.body.content }}\",\n  \"stream\": false,\n  \"options\": {\n    \"draft\": \"gemma3:270m\",\n    \"num_draft\": 5,\n    \"temperature\": 0,\n    \"num_ctx\": 4096\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -6736,
+        -1456
+      ],
+      "id": "7bc7e9ba-726f-4ba6-92cc-59bd367fddeb",
+      "name": "Draft model1"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "stkaDC7e4sREpM48"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "task_name": "={{ $json['task_name'] }}",
+            "number_of_blocks": "={{ $json.days_to_deadline }}",
+            "deadline": "={{ $json.deadline }}",
+            "block_duration": "1",
+            "phone": "={{ $('Webhook').first().json.body.phone }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "task_name",
+              "displayName": "task_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "deadline",
+              "displayName": "deadline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "number_of_blocks",
+              "displayName": "number_of_blocks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "block_duration",
+              "displayName": "block_duration",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -4128,
+        -3664
+      ],
+      "id": "226a1d23-c3d1-4e1a-b444-7025e87a765c",
+      "name": "Call 'Scheduler_tool'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Parse the input\nconst output = JSON.parse($input.first().json.output);\n\n// 2. Use a valid date constructor\n// If $today is a string variable provided by your node:\nconst deadline = new Date($today); \n\n// 3. Add the days\ndeadline.setDate(deadline.getDate() + Number(output.days_to_deadline));\n\n// 4. Update and return\noutput.deadline = deadline.toISOString(); // Better to store as a string\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4576,
+        -3664
+      ],
+      "id": "15997551-63e1-4984-8da9-694445d3e728",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "confirmation"
+            },
+            {
+              "name": "nextTrigger",
+              "value": "={{ $execution.resumeUrl }}"
+            },
+            {
+              "name": "msg",
+              "value": "=Goal: {{ $json.task_name }}\nDays left: {{ $json.days_to_deadline }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -5824,
+        -3504
+      ],
+      "id": "0765218a-ebf9-4959-93b3-65c4a354c06f",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "717f6cb9-7a6f-450e-998a-37a880c1ca45",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -5376,
+        -3504
+      ],
+      "id": "b6bd71e6-e714-41a1-bf20-1223388b9996",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -5600,
+        -3504
+      ],
+      "id": "540fc3f2-5f18-4189-890b-1d3b461d913a",
+      "name": "Wait",
+      "webhookId": "812bba88-fd2f-4bce-80d8-0efb5227ae86"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "schedule"
+            },
+            {
+              "name": "msg",
+              "value": "=I will recreate the Schedule"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -5152,
+        -3088
+      ],
+      "id": "4e3e25fa-0c1c-4e10-9c59-6ac278077d14",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9eae33d9-89cd-4275-92ea-c27708eb9e96",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "[READY]",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -6768,
+        -3392
+      ],
+      "id": "5ffca9a6-7b80-47cf-99f6-a3e6f30c63d2",
+      "name": "Check for Completion1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ba5e1f0d-b270-4cc1-a91e-bf20193e5e14",
+              "leftValue": "={{ $('Webhook').first().json.body.parent_mode }}",
+              "rightValue": "Student",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -8688,
+        -1568
+      ],
+      "id": "c103f721-5d50-4d3e-9999-9aa90c3a6f9d",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "17636dce-08d9-4ec7-9414-969c7dea60ae",
+              "leftValue": "={{ $json.body.phone }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -9280,
+        -1632
+      ],
+      "id": "e679ed8a-3a66-4ded-b9b0-9cd967e1ff1b",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "switch_mode",
+        "responseMode": "lastNode",
+        "responseData": "noData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -10288,
+        -736
+      ],
+      "id": "f37c468b-3744-4549-85f3-8d77d359adb6",
+      "name": "Webhook1",
+      "webhookId": "6f00e6c4-40fe-4ea2-bfb0-ccf2c5c6e576"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "84093d34-e8a8-4c0f-b518-993a69aa98e7",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "Continue on the Cogni-Jarvis Chat",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -10064,
+        -736
+      ],
+      "id": "57a32748-5b01-4fb2-ab96-bee2b4875aac",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "switchmode"
+            },
+            {
+              "name": "nextTrigger",
+              "value": "=http://100.104.205.24:5678/webhook/thought_dump"
+            },
+            {
+              "name": "msg",
+              "value": "=Hello! How can I help you today?"
+            },
+            {
+              "name": "parent_mode",
+              "value": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -9840,
+        -832
+      ],
+      "id": "3fe32752-2af4-44f8-9573-7150552c31be",
+      "name": "HTTP Request2",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "JzdD7wWd20G9mOq5",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/JzdD7wWd20G9mOq5",
+          "cachedResultName": "Parent Mode Chat"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -8464,
+        -1552
+      ],
+      "id": "366f8605-ca4c-49af-b867-4eb68dad6597",
+      "name": "Execute Workflow"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -8176,
+        -1552
+      ],
+      "id": "842b2557-2fdd-4bed-a13c-b136b9f9a897",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0a79149f-bac9-4fd6-a44d-1714d47ed106",
+              "leftValue": "={{ $json.body.lock_mode }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -9008,
+        -1488
+      ],
+      "id": "5228f434-810b-4b8c-ad20-a7770dd2ab14",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "parent"
+            },
+            {
+              "name": "msg",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7744,
+        -1184
+      ],
+      "id": "0c9bc84d-588b-4a67-9597-d191e2085be2",
+      "name": "HTTP Request8",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.content }}",
+        "options": {
+          "systemMessage": "=ROLE\nYou are \"Compass,\" a specialized AI Parenting Coach for families of neurodivergent children (Autism and ADHD). Your goal is to provide practical, evidence-based, and deeply empathetic advice. You follow the \"Low-Demand Parenting\" and \"Gentle Parenting\" frameworks.\n\nCONTEXT\nYou are talking to a parent about their child,{{ $json.body.settings.student_name }} , who is {{ $json.body.settings.age_group }} years old.\n- ADHD Presentation: {{ $json.body.settings.adhd_type }} (0=Inattentive, 1=Hyperactive, 2=Combined)\n- Autism Support Level based on DSM-5: {{ $json.body.settings.support_level }} \n\nGUIDING PRINCIPLES\n1. Validation First: Parenting neurodivergent children is hard. Always validate the parent's feelings before offering a solution. Use phrases like \"It makes sense that you feel overwhelmed\" or \"That sounds like a really tough cycle.\"\n2. Neuro-Affirming Advice: Never suggest \"punishment\" or \"tough love.\" Focus on environmental modifications, sensory regulation, and \"collaborative problem solving.\"\n3. The \"Brain-First\" Lens: Remind parents that \"unwanted behavior\" is usually a sign of an overwhelmed nervous system or lagging executive function skills, not \"naughtiness.\"\n4. Actionable & Small: Give 1-3 tiny, concrete steps the parent can try right now. Avoid long, theoretical lectures.\n5. Have a main Heading for the message\n\nTONE & STYLE\n- Warm & Peer-Like: Speak like a supportive friend who happens to be an expert.\n- Concise: No walls of text. Use bullet points for steps.\n- Realistic: Acknowledge that \"perfect\" isn't the goal—survival and connection are.\n- Use Bold Headers: Always put the main advice in bold at the start of a line.\n- Short Paragraphs: Maximum 2 sentences per paragraph.\n- Strict Bulleting: Use simple bullet points (-) for steps.\n- Visual Breathing Room: Use double line breaks between sections.\n- No Fluff: Keep the opening empathy to 1-2 sentences max.\n\nPERMISSIONS & SCOPE\n- You ARE allowed to discuss \"Activities of Daily Living\" (ADLs) like eating, dressing, and hygiene from a coaching and sensory perspective.\n- You are NOT giving medical/nutritional advice, but rather behavioral and environmental strategies."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -8448,
+        -1184
+      ],
+      "id": "c7bc49ad-be40-4632-a860-9a9b044312ed",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -8368,
+        -960
+      ],
+      "id": "2e801a79-0572-4b6d-9b81-3a2ce7e355da",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.output.replaceAll(\"•\", \"-\").replaceAll(/-\\s*\\n/g, '-');;\n\nreturn { output } ;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8032,
+        -1184
+      ],
+      "id": "a2a076f8-5f61-4577-8a3a-9166cbf7820d",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_chat_histories",
+          "mode": "list"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "session_id",
+              "value": "={{ $json.body.sessionId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -7776,
+        -3488
+      ],
+      "id": "d5f2074d-91eb-40fc-86c1-7da97261d210",
+      "name": "Select rows from a table",
+      "credentials": {
+        "postgres": {
+          "id": "D6RItCzHbtXzIf42",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User input: {{ $('overall_output').item.json.content }}",
+        "options": {
+          "systemMessage": "=Role: Data Extraction Agent.\nTask: Identify the \"Task Goal\" and \"Days to Deadline\" from {{ $('overall_output').item.json.content }}.\n\nStep 1: Extraction Logic\nTask Name Identification:\n\nSpecific Goal: Extract only the core goal and leave the rest.\n\nInclude Scope: If the user provides a detailed description, extract the entire descriptive phrase as the task name.\n\nIgnore Generic Terms: Do NOT accept \"a project,\" \"the work,\" \"my assignment,\" or \"something\" as a task name. If only generic terms are found, set task name to \"MISSING\".\n\nDeadline Calculation:\n\nIdentify the timeframe provided.\n\nConversion Math: 1 Month = 30 Days | 1 Week = 7 Days.\n\nIf no timeframe is found, set days_to_deadline to null.\n\nStep 2: Strict Execution Rules\nMandatory JSON Output: Your entire response must be a single JSON object.\n\nNo Placeholders: Do NOT use the phrase \"Extracted Task Name.\" You must replace it with the actual data from the user's input.\n\nZero-Dialogue: Do not include any introductory text, markdown code blocks (```), or \"Note\" sections.\n\nStep 3: Required JSON Format\nJSON\n{\n  \"task_name\": \"[Insert Extracted Subject]\",\n  \"days_to_deadline\": [Insert Integer],\n  \"explain\": \"[Briefly state the conversion, e.g., '2 months = 60 days']\",\n  \"status\": \"[READY or INCOMPLETE]\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -6400,
+        -3504
+      ],
+      "id": "e953f4fd-95ed-49f9-8d71-7709c64e3af7",
+      "name": "Scheduler Agent1"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {
+          "keepAlive": "5h",
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -6320,
+        -3280
+      ],
+      "id": "85f9881e-19f3-4b45-ae95-da45a8d65440",
+      "name": "Llama3.2 model2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Parse the input\nconst output = JSON.parse($input.first().json.output);\n\n// 2. Use a valid date constructor\n// If $today is a string variable provided by your node:\nconst deadline = new Date(\"2026-03-05T00:00:00.000-05:00\"); \n\n// 3. Add the days\ndeadline.setDate(deadline.getDate() + Number(output.days_to_deadline));\n\n// 4. Update and return\noutput.deadline = deadline.toISOString(); // Better to store as a string\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6048,
+        -3504
+      ],
+      "id": "91d96a67-f33a-420b-a652-d0621ae893e0",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "17636dce-08d9-4ec7-9414-969c7dea60ae",
+              "leftValue": "={{ $('Webhook').first().json.body.phone }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -6624,
+        -3616
+      ],
+      "id": "eadca795-d967-4274-a683-220bfe8da93d",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "98ec5c1c-b1bb-4480-846d-e6e94d131e16",
+              "leftValue": "={{ $json.days_to_deadline }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -4352,
+        -3664
+      ],
+      "id": "763a9240-c829-45e1-a048-388e350da4e9",
+      "name": "If6"
+    },
+    {
+      "parameters": {
+        "jsCode": "let new_item = \"\"\nfor (const item of $input.all()) {\n  if (item.json.message.type === \"human\") {\n    if (!item.json.message.content.includes(\"[READY]\")) {\n      new_item = new_item + \" \" + item.json.message.content;\n    }\n  } else {\n    continue;\n  }\n}\nnew_item = new_item + \". \" + $('Remove_substring1').first().json.body.content\n\n$('Remove_substring1').first().json.body.content = new_item.replaceAll(\"completed\", \"to complete\")\n\nreturn $('Remove_substring1').first().json.body"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3728,
+        -2800
+      ],
+      "id": "31f9caee-f955-4038-a411-f9a06d4ae9f4",
+      "name": "Return_body_"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_chat_histories",
+          "mode": "list",
+          "cachedResultName": "n8n_chat_histories"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "session_id",
+              "value": "={{ $('Webhook').first().json.body.sessionId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3984,
+        -3040
+      ],
+      "id": "801a6f74-d2f1-4e8c-a2a5-e2369f186ec8",
+      "name": "Select rows from a table1",
+      "credentials": {
+        "postgres": {
+          "id": "D6RItCzHbtXzIf42",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "17636dce-08d9-4ec7-9414-969c7dea60ae",
+              "leftValue": "={{ $('Webhook').first().json.body.phone }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -4864,
+        -3184
+      ],
+      "id": "8b7438bc-2b0d-411f-b378-563a13c56b2d",
+      "name": "If7"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -4576,
+        -2992
+      ],
+      "id": "26b3ca0f-71c1-48a2-8016-2b95cae3245c",
+      "name": "Ready Response1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3b2ae26c-556c-4a80-9614-ad0bbc87444f",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "start",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            },
+            {
+              "id": "46f935ab-3f9b-4e49-97eb-c675c93c151a",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "play",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "516c34ac-91f1-4a7d-85df-1bdc377652cc",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "music",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "70eff182-90d7-4d12-8abe-1d86e5232a63",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "listen",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "551e8831-0dab-45d1-9718-5af3e4da53d4",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "bored",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            },
+            {
+              "id": "fc9728ed-fa1a-4f9e-9cf3-e5924b146b89",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "stop",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "d087a72e-eded-4a76-9c0d-2873b6f5f05d",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "song",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -10096,
+        -2064
+      ],
+      "id": "713e04d3-6aa2-4adc-ae99-e3d9d4281784",
+      "name": "If8"
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.body.content }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Song_Name",
+              "description": "If the input Contains a probable song name then select this category"
+            },
+            {
+              "category": "Stop_Song",
+              "description": "If the input mentioned that the song has to be stopped then select this category."
+            }
+          ]
+        },
+        "options": {
+          "fallback": "other",
+          "systemPromptTemplate": "You are a song detection classifier. Analyze the user's input.\n\n### RULES:\n- Output ONLY a JSON object.\n- No conversational text or explanations.\n- \"Song_Name\" is true ONLY if a specific track title is identified.\n- \"Stop_Song\" is true ONLY if the user mentiones to stop the song.\n- \"fallback\" is true ONLY if the input is vague or missing a title.\n\n### EXAMPLES:\nInput: \"Play Wildfire\"\n{{\"Song_Name\": true, \"Stop_Song\":false \"fallback\": false}}\n\nInput: \"I want to listen to something\"\n{{\"Song_Name\": false, \"Stop_Song\":false \"fallback\": true}}\n\nInput: \"stop song\"\n{{\"Song_Name\": false, \"Stop_Song\":true \"fallback\": false}}\n\nanything else:\n{{\"Song_Name\": false, \"Stop_Song\":false \"fallback\": true}}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -9312,
+        -4592
+      ],
+      "id": "8804678a-b0a5-4d62-98d6-cbe4202c80ab",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "model": "mistral:latest",
+        "options": {
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        -9232,
+        -4336
+      ],
+      "id": "1a126c78-acd5-4626-b3b7-1d2a92e5a621",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "message"
+            },
+            {
+              "name": "text",
+              "value": "What song do you want to listen to?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7936,
+        -4224
+      ],
+      "id": "d63ecabf-f65f-49cc-9507-7adcb05a38b3",
+      "name": "HTTP Request6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "status"
+            },
+            {
+              "name": "message",
+              "value": "Song name required"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -8160,
+        -4224
+      ],
+      "id": "bb9c58b3-f5ff-4597-9255-19aa52cb7845",
+      "name": "HTTP Request7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5002/api/speak",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "What song do you want to listen to?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7712,
+        -4224
+      ],
+      "id": "796b83f0-a999-4409-b737-9f5407391ec1",
+      "name": "HTTP Request9"
+    },
+    {
+      "parameters": {
+        "url": "http://100.111.120.112:5002/api/ask",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7488,
+        -4224
+      ],
+      "id": "4cb600ec-7ff5-42fa-9d5f-711e9b00c6ff",
+      "name": "HTTP Request10"
+    },
+    {
+      "parameters": {
+        "url": "http://172.17.0.1:8080/search?format=json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "=intitle:\"what is this song\" {{ $json.to_check }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7040,
+        -4368
+      ],
+      "id": "6f406cb9-1c52-4dff-b073-237b325bce35",
+      "name": "Web search1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=user input: {{ $('Code in JavaScript9').item.json.to_check }}",
+        "options": {
+          "systemMessage": "=Role: \nYou are part of the Music Player, Your role is to find the songs in from the input of the web search and output what the song is most likely based on the user input and the search result.\n\nSearch results: {{ $json.searchResults }}\n\nformat of JSON: \n{\n \"name\": {Author Name},\n \"song name\": { Song Name }\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -6592,
+        -4368
+      ],
+      "id": "2d558dd4-04e8-4dd8-8f1a-0b9033c5e9e4",
+      "name": "AI Agent2"
+    },
+    {
+      "parameters": {
+        "model": "mistral:latest",
+        "options": {
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -6512,
+        -4144
+      ],
+      "id": "d0bf30f6-b72f-4be2-a96e-3f634538d565",
+      "name": "Ollama Chat Model2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nlet string = \"\"\nfor (const item of $input.first().json.results) {\n  string = string + \",\" + item.title;\n}\n\nreturn { \"searchResults\": string};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6816,
+        -4368
+      ],
+      "id": "bb8bafa4-b6f0-47c1-b859-3b2bb0093401",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "jsCode": "let output = JSON.parse( $input.first().json.output)\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6240,
+        -4368
+      ],
+      "id": "e9895837-33a0-4b38-b607-73db2359d769",
+      "name": "Code in JavaScript6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/stop_song",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -8896,
+        -4512
+      ],
+      "id": "711a93b7-58ff-4fc9-844c-b8c466a02530",
+      "name": "HTTP Request12"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.content }}",
+        "options": {
+          "systemMessage": "=Role: \nYou are part of the Music Player, Your role is to check if there is an identifiable song name present in the input given by the user. Output the response in JSON with the below format.\n\nIf no specific song title or artist is mentioned in the input, set \"present\" to false and state that no song was identified. Do not assume or invent a song.\nA 'song name' must be a specific title (e.g., 'Thriller', 'Yellow'). Generic nouns like 'song', 'music', 'track', or 'tune' do not count as identifiable song names. If only generic terms are present, set present to false.\n\nformat of JSON: \n{\n\"present\" : {boolean}\n\"explain\" : {explanation}\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -8960,
+        -4288
+      ],
+      "id": "5dcbab3f-0ac2-437b-9056-a9eb31716886",
+      "name": "AI Agent3"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -8880,
+        -4064
+      ],
+      "id": "ea7c906f-782f-45bd-9ea3-bd9cd1e14cfb",
+      "name": "Ollama Chat Model3",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let output = JSON.parse( $input.first().json.output)\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8608,
+        -4288
+      ],
+      "id": "2b105342-6722-4fba-89cd-42d17f4bdf12",
+      "name": "Code in JavaScript7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f8e7fde3-a179-4775-8597-b04ff5e31162",
+              "leftValue": "={{ $json.present }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -8384,
+        -4288
+      ],
+      "id": "27fa9761-8936-4497-871e-d170c446aa4e",
+      "name": "If9"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Use optional chaining (?.) to prevent errors if a property is missing\nconst to_check = \n  $input.first()?.json?.message || \n  $input.first()?.json?.body?.content || \n  $('Webhook').first()?.json?.body?.content || \n  \"No input found\"; // Fallback value\n\nreturn { to_check };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7264,
+        -4368
+      ],
+      "id": "84dd61ee-cb28-4df0-a8cd-2d044513eca4",
+      "name": "Code in JavaScript9"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7cf1a6c0-7198-48b7-bed4-6876122dc7a8",
+              "name": "body.message",
+              "value": "song present",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -7488,
+        -4736
+      ],
+      "id": "744d2d55-0b7c-4ab3-b65a-e71ac8a70a7b",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -5792,
+        -4560
+      ],
+      "id": "d06aa576-f3e3-408c-aeea-a148e99b7ca9",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/play_song",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "song",
+              "value": "={{ $json['song name'] }} {{ $json.name == \"Unknown\" ? \"\": \"by \" + $json.name }} song"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -6016,
+        -4560
+      ],
+      "id": "35faac5c-02ee-46b1-a948-9b9ecf0bd193",
+      "name": "HTTP Request13",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "message"
+            },
+            {
+              "name": "text",
+              "value": "={{ $('Code in JavaScript6').item.json['song name'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -5792,
+        -4368
+      ],
+      "id": "31e6b806-4833-4c20-b2fd-42dc7c9136f6",
+      "name": "HTTP Request11"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "status"
+            },
+            {
+              "name": "message",
+              "value": "Playing Song"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -6016,
+        -4368
+      ],
+      "id": "7382edea-5433-479a-9bcb-a9959d75e1c3",
+      "name": "HTTP Request14"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "message"
+            },
+            {
+              "name": "text",
+              "value": "Jarvis System Online"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -8320,
+        -4480
+      ],
+      "id": "5ebd3f3f-abce-4860-8087-c5c49898e387",
+      "name": "HTTP Request17"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "status"
+            },
+            {
+              "name": "message",
+              "value": "System Online"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -8592,
+        -4480
+      ],
+      "id": "3a528846-0d64-454e-b82b-3fe18871ee24",
+      "name": "HTTP Request18"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "message"
+            },
+            {
+              "name": "text",
+              "value": "Jarvis System Online"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -5120,
+        -4368
+      ],
+      "id": "c264a764-fbef-4726-8b1f-6bae34e73da4",
+      "name": "HTTP Request19"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "status"
+            },
+            {
+              "name": "message",
+              "value": "System Online"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -5344,
+        -4368
+      ],
+      "id": "ddf91cc7-2cdd-47a5-b857-68b086c457c8",
+      "name": "HTTP Request20"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -5568,
+        -4368
+      ],
+      "id": "fed7cdf5-f374-440e-924d-ccf85c56fcee",
+      "name": "Wait1",
+      "webhookId": "e0ade1ea-a3a6-43ab-963e-938128385283"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Context: {{ $node[\"Code in JavaScript\"].json.cleaned_search_context }}\nDraft Answer: {{ $node[\"Draft model\"].json.response }}",
+        "options": {
+          "systemMessage": "You are a quality control judge. You will be given a Search Context, a User Question, and a Draft Answer.\nYour only job is to determine if the Draft Answer is supported by the Search Context.\n\nRules:\n\nIf the Draft Answer contains facts NOT found in the Context, fail it.\n\nIf the Draft Answer says 'I don't know' appropriately, pass it.\n\nOutput EXACTLY one word: 'PASS' if the answer is grounded, or 'FAIL' if it contains hallucinations or outside knowledge."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -6576,
+        -2240
+      ],
+      "id": "74bb8205-3e1a-4170-a691-7e520f926ab2",
+      "name": "Decider"
+    },
+    {
+      "parameters": {
+        "source": "googleSheets",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.evaluationTrigger",
+      "typeVersion": 4.7,
+      "position": [
+        -3120,
+        -752
+      ],
+      "id": "ee343602-cd09-4a40-b08d-7e3b0698e73f",
+      "name": "When fetching a dataset row"
+    },
+    {
+      "parameters": {
+        "content": "# Music Workflow",
+        "height": 1024,
+        "width": 4672
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -9440,
+        -4864
+      ],
+      "typeVersion": 1,
+      "id": "8f1ad96a-e926-4e0d-a57a-81620a5ba867",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Scheduler Workflow",
+        "height": 1216,
+        "width": 4592,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -8128,
+        -3792
+      ],
+      "typeVersion": 1,
+      "id": "ae4bf615-0aec-4ca8-90b5-8a5500474661",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Question Answer Workflow\n",
+        "height": 480,
+        "width": 2080,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7312,
+        -2352
+      ],
+      "typeVersion": 1,
+      "id": "ed2da6aa-253a-4d35-bb15-eee4eae76218",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "# Casual Chatting Workflow",
+        "height": 368,
+        "width": 896
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -6864,
+        -1568
+      ],
+      "typeVersion": 1,
+      "id": "a61a8852-ae6e-4747-bf45-f2222183075c",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "# Adviser section\n\n",
+        "height": 464,
+        "width": 1120
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -8608,
+        -1296
+      ],
+      "typeVersion": 1,
+      "id": "7d72aa14-5162-460e-b117-965a6b19ad18",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "# Decider Workflow",
+        "height": 496,
+        "width": 768
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -10368,
+        -928
+      ],
+      "typeVersion": 1,
+      "id": "ac921352-ca12-4bb9-b5f9-8a74fb595ffc",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gemma3:1b\",\n  \"system\": \"question:{{ $('Webhook').item.json.body.content }} \\n answer: {{ $json.text }}\",\n  \"prompt\": \"Taking the question into considering form a sentence answer\",\n  \"stream\": false,\n  \"options\": {\n    \"draft\": \"gemma3:270m\",\n    \"num_draft\": 5,\n    \"temperature\": 0,\n    \"num_ctx\": 4096\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -6000,
+        -2240
+      ],
+      "id": "946323ef-ebf3-4d27-983c-7a424d6a3c41",
+      "name": "Draft model2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "switchmode"
+            },
+            {
+              "name": "nextTrigger",
+              "value": "=http://100.104.205.24:5678/webhook/thought_dump"
+            },
+            {
+              "name": "msg",
+              "value": "=You are now in Parent mode chat.\nWhat would you like to do"
+            },
+            {
+              "name": "parent_mode",
+              "value": "1"
+            },
+            {
+              "name": "option",
+              "value": "Monitor Child Progress, Get Parental Advice, Modify off times, Monitor tasks, other"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -9840,
+        -624
+      ],
+      "id": "d57b36ba-d1aa-40e9-ad4e-364fa0fbd009",
+      "name": "HTTP Request3",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "path": "quote-of-the-day",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -9488,
+        -5808
+      ],
+      "id": "cea87ded-df26-4046-ace1-5f6851c89856",
+      "name": "Webhook2",
+      "webhookId": "b72bda23-bfd8-40c2-961a-504715f33412"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $today }}\nage group: {{ $json.age_group }}",
+        "options": {
+          "systemMessage": "=The Daily Catalyst\nYou are The Daily Catalyst, a specialized AI agent designed to provide a brief, impactful start to a user's day. Your sole responsibility is to deliver either one profound quote or a single, original line of morning inspiration tailored to the user's stage of life.\n\nCore Directives\nSingularity: Output exactly one quote or one original sentence. Never provide a list or options.\n\nPure Content: Output only the text of the quote or line. Do not include the author, attribution (e.g., \"— Unknown\"), or quotation marks.\n\nBrevity: Keep the output concise. Original lines must be under 20 words.\n\nTone: Maintain a tone that is grounded and encouraging—avoiding \"toxic positivity.\"\n\nAge-Appropriate Curation: Adjust the theme based on the user's provided age group:\n\nYouth/Students: Growth, courage, and potential.\n\nWorking Professionals: Resilience, discipline, and purpose.\n\nSeniors: Reflection, legacy, and the beauty of the present.\n\nOutput Format\nYour response must contain only the raw text of the quote.\n\n[Quote or Original Line]\n\nConstraint Checklist\nStrictly No Attributions: Do not include the name of the author or \"Original.\"\n\nNo Conversational Filler: No \"Good morning\" or introductory text.\n\nNo Explanations: Provide the text only.\n\nNo Punctuation Padding: Do not wrap the output in quotation marks unless they are part of the internal sentence structure.\n\nUser Context Integration\nUser Age Group: {{ $('Select rows from a table2').item.json.age_group }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -9072,
+        -5808
+      ],
+      "id": "c2d1a615-5142-4aed-80cb-8f584a490564",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -9072,
+        -5616
+      ],
+      "id": "de19c67c-a012-461c-8895-efdeaae697ab",
+      "name": "Ollama Chat Model4",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -8720,
+        -5808
+      ],
+      "id": "29d1cce3-c1e4-4a3d-99dd-4839214d7ec7",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "system_config",
+          "mode": "list",
+          "cachedResultName": "system_config"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -9264,
+        -5808
+      ],
+      "id": "81d87402-fc5c-4193-8643-0a16df77e1c6",
+      "name": "Select rows from a table2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.content }}",
+        "options": {
+          "systemMessage": "You are a data extraction agent. Your sole task is to parse unstructured text and extract a reminder description and its associated duration. You must output the result strictly in JSON format.\n\nRules:\n\nreminder: Extract the core task or event mentioned.\n\ntime: Convert any mentioned timeframe into a standardized duration string (e.g., \"10 minutes\", \"2 hours\", \"next Monday at 3pm\").\n\nOutput: Provide only the JSON object. Do not include conversational filler, markdown code blocks (unless requested), or explanations.\n\nOutput Schema:\n\nJSON\n{\n  \"reminder\": \"string\",\n  \"time\": \"number\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -7920,
+        -1712
+      ],
+      "id": "305b7a6d-14a2-4a16-9efd-e11fe1218da3",
+      "name": "AI Agent4"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -7920,
+        -1504
+      ],
+      "id": "a350883c-1f56-48ba-85b4-ec7efbb26cdb",
+      "name": "Ollama Chat Model5",
+      "credentials": {
+        "ollamaApi": {
+          "id": "eRofPzx8HtGgATci",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/set_reminder",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "task",
+              "value": "={{ $json.reminder }}"
+            },
+            {
+              "name": "time",
+              "value": "={{ $json.time }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7472,
+        -1520
+      ],
+      "id": "7e5a3985-a91a-4f4b-a286-bac5a460a7b4",
+      "name": "HTTP Request15"
+    },
+    {
+      "parameters": {
+        "jsCode": "let output = $input.first().json.output\n\nreturn JSON.parse(output);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7664,
+        -1536
+      ],
+      "id": "586dfa4c-eb89-4fc8-8135-9524eb03851e",
+      "name": "Code in JavaScript8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "message"
+            },
+            {
+              "name": "text",
+              "value": "Jarvis System Online"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -6832,
+        -1104
+      ],
+      "id": "9e4c0c0f-b523-41f9-b4c8-254c76078a41",
+      "name": "HTTP Request16"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "status"
+            },
+            {
+              "name": "message",
+              "value": "SYSTEM ONLINE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7056,
+        -1168
+      ],
+      "id": "b95cbc68-3da1-44a2-ac9b-b712cbc262a7",
+      "name": "HTTP Request21"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5002/api/speak",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "Reminder Set"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7248,
+        -1344
+      ],
+      "id": "1e305baf-e388-419d-8a06-70f372472167",
+      "name": "HTTP Request22"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "100.104.205.24:5678",
+            "user-agent": "python-requests/2.33.1",
+            "accept-encoding": "gzip, deflate",
+            "accept": "*/*",
+            "connection": "keep-alive",
+            "content-length": "124",
+            "content-type": "application/json"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "content": "I have to write a report on the different types of vitamins used in 3D printers in two weeks.",
+            "phone": false
+          },
+          "webhookUrl": "http://localhost:5678/webhook/thought_dump",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Scheduler Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Project Identifier",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "overall_output": {
+      "main": [
+        [
+          {
+            "node": "Project Identifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check_for_Response": {
+      "main": [
+        [
+          {
+            "node": "Remove_substring",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove_substring": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return_body_2": {
+      "main": [
+        [
+          {
+            "node": "overall_output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return_body_1": {
+      "main": [
+        [
+          {
+            "node": "overall_output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llama3.2 model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Main_Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Main_Classifier": {
+      "main": [
+        [
+          {
+            "node": "Return_body_2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond_Extenstion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Draft model1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Web search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Draft model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project Identifier": {
+      "main": [
+        [
+          {
+            "node": "Check for Completion1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral_model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Project Identifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Completion": {
+      "main": [
+        [
+          {
+            "node": "If7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Special Chars": {
+      "main": [
+        [
+          {
+            "node": "Ready Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Json": {
+      "main": [
+        [
+          {
+            "node": "Request Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ready Checker": {
+      "main": [
+        [
+          {
+            "node": "Scheduler Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llama3.2 model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Scheduler Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response Cleaner": {
+      "main": [
+        [
+          {
+            "node": "Natural Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web search": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response Cleaner1": {
+      "main": [
+        [
+          {
+            "node": "Answer user Questions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Draft model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft model": {
+      "main": [
+        [
+          {
+            "node": "Decider",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Decider",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Draft model2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft model1": {
+      "main": [
+        [
+          {
+            "node": "Response Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scheduler Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "If6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Check for Completion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ready Checker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Project Identifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Completion1": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Main_Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Main_Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        []
+      ]
+    },
+    "Execute Workflow": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table": {
+      "main": [
+        [
+          {
+            "node": "Return_body_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scheduler Agent1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llama3.2 model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Scheduler Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "Scheduler Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ready Checker",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check for Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If6": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'Scheduler_tool'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table1": {
+      "main": [
+        [
+          {
+            "node": "Return_body_",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return_body_": {
+      "main": [
+        [
+          {
+            "node": "Scheduler Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If7": {
+      "main": [
+        [
+          {
+            "node": "Remove Special Chars",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ready Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If8": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check_for_Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request7": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request6": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request9": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request10": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web search1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript6": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request13",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript7": {
+      "main": [
+        [
+          {
+            "node": "If9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If9": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript9": {
+      "main": [
+        [
+          {
+            "node": "Web search1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request13": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request14": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request11": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request18": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request12": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request20": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request19",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request19": {
+      "main": [
+        []
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request20",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decider": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft model2": {
+      "main": [
+        [
+          {
+            "node": "Response Cleaner1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook2": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript8": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request21": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request15": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request22",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request22": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request21",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "dynamic",
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveExecutionProgress": true
+  },
+  "versionId": "88927f19-5442-4477-b7d7-1381579ea6ff",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a23527dc3c25acf1a0aa7850f9775ecca4d70743200cf35dd3ef15e47337d026"
+  },
+  "id": "BwYXI1C1zd3QQvIN",
+  "tags": []
+}
