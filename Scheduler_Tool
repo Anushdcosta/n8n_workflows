@@ -1,0 +1,1397 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "table": {
+          "__rl": true,
+          "value": "student_schedule",
+          "mode": "list",
+          "cachedResultName": "student_schedule"
+        },
+        "deleteCommand": "delete",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -672,
+        0
+      ],
+      "id": "efde8488-2d1b-46d9-8ce4-f808cd760071",
+      "name": "Delete table or rows",
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        432,
+        16
+      ],
+      "id": "0b59a4d3-2b07-4037-a178-263c5c687c58",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "task_name",
+              "type": "any"
+            },
+            {
+              "name": "deadline",
+              "type": "any"
+            },
+            {
+              "name": "number_of_blocks",
+              "type": "any"
+            },
+            {
+              "name": "block_duration",
+              "type": "any"
+            },
+            {
+              "name": "phone",
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "External execution",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -704,
+        -432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get your busy list from MySQL\nconst busyList = $json.busy_string || \"\"; \nconst deadlineStr = $input.first().json.lastDate;\nconst now = new Date(); \n// Convert server time to UTC+4 specifically\nconst start = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (4 * 3600000));\n\nconst end = new Date(deadlineStr);\n\nlet availableSlots = [];\nlet current = new Date(start);\n\n// 1. Initialization: Set start to the beginning of the NEXT available hour\ncurrent.setMinutes(0, 0, 0, 0);\ncurrent.setHours(current.getHours() + 1);\n\n// 2. Initial logic to handle \"Out of Office\" hours immediately\nif (current.getHours() >= 19) {\n    current.setDate(current.getDate() + 1);\n    current.setHours(9);\n} else if (current.getHours() < 9) {\n    current.setHours(9);\n}\n\n\n// 3. Loop through days until deadline\nwhile (current <= end) {\n    const dayOfWeek = current.getDay(); // 0 = Sunday, 6 = Saturday\n    const currentHour = current.getHours();\n    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);\n    \n    const dateStr = current.toISOString().split('T')[0];\n    const timeStr = current.toTimeString().split(' ')[0];\n    const timestamp = `${dateStr} ${timeStr}`;\n\n    let isAllowedTime = false;\n    if (isAllowedTime && !busyList.includes(timestamp)) {\n    // FIX: Only push if the slot time is actually after the moment the workflow started\n    if (new Date(current) > start) {\n        availableSlots.push(timestamp);\n    }\n}\n    if (isWeekend) {\n        // Weekend Rule: Allowed 16:00 - 19:00 (3 blocks)\n        if (currentHour >= 16 && currentHour < 19) {\n            isAllowedTime = true;\n        }\n    } else {\n        // Weekday Rule: Allowed 09:00-14:00 AND 16:00-17:00\n        if ((currentHour >= 9 && currentHour < 14) || (currentHour >= 16 && currentHour < 17)) {\n            isAllowedTime = true;\n        }\n    }\n\n\n    if (isAllowedTime && !busyList.includes(timestamp)) {\n        if (current > start) { \n            availableSlots.push(timestamp);\n        }\n    }\n\n    // Move to next hour\n    current.setHours(current.getHours() + 1);\n    \n    // 5. Day rollover: If past 7 PM, jump to 9 AM the next day\n    if (current.getHours() >= 19) {\n        current.setDate(current.getDate() + 1);\n        current.setHours(9);\n    }\n}\n\nreturn { availableSlots };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -432
+      ],
+      "id": "6dcae3ad-9492-4148-9260-f0b28b4fb815",
+      "name": "JS Slot Maker1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT CONCAT(start_time) as busy_slot \nFROM student_schedule \nWHERE task_date >= CURRENT_DATE;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        192,
+        -432
+      ],
+      "id": "5519d8b3-323a-4af9-af3b-df603402c899",
+      "name": "MySQL_select1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// 1. Direct Reference: Get the deadline string\nconst deadlineStr = $('External execution').first().json.deadline; \n\n// 2. Helper to format for MySQL (YYYY-MM-DD HH:mm:ss)\nconst toMysqlFormat = (dateInput) => {\n    const date = new Date(dateInput);\n    const YYYY = date.getFullYear();\n    const MM = String(date.getMonth() + 1).padStart(2, '0');\n    const DD = String(date.getDate()).padStart(2, '0');\n    const HH = String(date.getHours()).padStart(2, '0');\n    const mm = String(date.getMinutes()).padStart(2, '0');\n    const ss = String(date.getSeconds()).padStart(2, '0');\n    return `${YYYY}-${MM}-${DD} ${HH}:${mm}:${ss}`;\n};\n\n// Handle date logic\nlet finalDate;\nif (deadlineStr) {\n    finalDate = toMysqlFormat(deadlineStr);\n} else {\n    const fallbackDate = new Date();\n    fallbackDate.setDate(fallbackDate.getDate() + 33);\n    finalDate = toMysqlFormat(fallbackDate);\n}\n\n// 3. Handle busy string formatting\nlet busyString = \"\";\nif (items.length > 0) {\n    // Map through all items to extract the busy_slot property\n    busyString = items.map(i => i.json.busy_slot).filter(slot => slot).join(', ');\n}\n\n// Return the data in the required JSON format\nreturn [\n  {\n    json: {\n      busy_string: busyString,\n      lastDate: $('External execution').first().json.deadline\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -432
+      ],
+      "id": "39483c0d-1618-45fb-920e-9d0210aa3d57",
+      "name": "Code in JavaScript6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"model\": \"llama3.2:3b\",\n    \"system\": \"You are a Project Architect. Your goal is to decompose the project into a complete end-to-end lifecycle. Break the project into EXACTLY {{ $('External execution').first().json.number_of_blocks }} sub-tasks. You MUST ensure the sequence covers the entire project span: starting from initial research/planning, moving through execution/development, and ending with final testing, documentation, or project wrap-up depending on the task. Assign a Complexity Score (1 to 5) to each. Output ONLY a JSON object containing a key 'subtasks' which is an array of objects. follow this format for each of the task JSON: {'task':string, 'Complexity Score': number}\",\n    \"prompt\": \"Project Name: {{ $('External execution').first().json.task_name }} Target Number of Blocks: {{ $('External execution').first().json.number_of_blocks }} Generate exactly {{ $('External execution').first().json.number_of_blocks }} unique sub-tasks as a JSON array inside the 'subtasks' key. {{ $('Wait1').isExecuted ? $('Wait1').item.json.body.content : '' }}\",\n    \"stream\": false,\n    \"format\": \"json\",\n    \"options\": {\n        \"temperature\": 0,\n        \"num_ctx\": 4096,\n        \"keep_alive\": -1\n    }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        864,
+        -432
+      ],
+      "id": "78669b93-5e39-4fc0-8986-8ddb8019e682",
+      "name": "Draft model"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the raw string from the previous AI node\nconst rawData = $json.response || $json.text || $json.output;\n\ntry {\n  // 2. Parse the string into a JSON object\n  const parsed = JSON.parse(rawData);\n  \n  // 3. Find the array regardless of the key name used by the AI\n  const taskArray = parsed.sprints || parsed.subtasks || (Array.isArray(parsed) ? parsed : []);\n\n  // 4. Return the data as an object for Stage C\n  // We use JSON.stringify to prepare it for the LLM prompt\n  return { \n    parsedJson: JSON.stringify(taskArray).replaceAll(\"\\\"\", \"'\")\n  };\n\n} catch (error) {\n  // Fallback for malformed JSON\n  return { error: \"Failed to parse AI output\", raw: rawData };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        -592
+      ],
+      "id": "160afe4a-ad4d-4c56-bf4b-6a0a62d020a2",
+      "name": "Code in JavaScript7"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tasks = $input.all(); \nconst slots = $('JS Slot Maker1').first().json.availableSlots;\n\n// 1. Calculate how many \"slots\" we need vs how many we have\nconst totalRequiredBlocks = tasks.reduce((acc, curr) => acc + (curr.json.complexity >= 4 ? 3 : 1), 0);\n\nconst spreadFactor = Math.floor(slots.length / totalRequiredBlocks);\n\nconsole.log(`DEBUG: Required: ${totalRequiredBlocks}, Available: ${slots.length}, Spread: ${spreadFactor}`);\n\nlet finalSchedule = [];\nlet slotIndex = 0;\n\nfunction addOneHour(dateStr) {\n    const date = new Date(dateStr.replace(' ', 'T'));\n    date.setHours(date.getHours() + 1);\n    const YYYY = date.getFullYear();\n    const MM = String(date.getMonth() + 1).padStart(2, '0');\n    const DD = String(date.getDate()).padStart(2, '0');\n    const HH = String(date.getHours()).padStart(2, '0');\n    return `${YYYY}-${MM}-${DD} ${HH}:00:00`;\n}\n\ntasks.forEach((item) => {\n    const task = item.json;\n\n    if (slotIndex >= slots.length) return;\n\n    // Assign Primary Session\n    const startTime = slots[slotIndex];\n    finalSchedule.push({\n        task_name: task.task || task.task_name,\n        complexity: task.complexity,\n        start_time: startTime,\n        end_time: addOneHour(startTime),\n        status: 'Scheduled'\n    });\n\n    // Move index forward by the spread factor to distribute tasks\n    slotIndex += spreadFactor;\n\n    if (task.complexity >= 4) {\n        if (slotIndex < slots.length) {\n            const secondStartTime = slots[slotIndex];\n            finalSchedule.push({\n                task_name: (task.task || task.task_name) + \" (Continued)\",\n                complexity: task.complexity,\n                start_time: secondStartTime,\n                end_time: addOneHour(secondStartTime),\n                status: 'Scheduled'\n            });\n            slotIndex += spreadFactor;\n        }\n    }\n});\n\nreturn finalSchedule.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        -592
+      ],
+      "id": "8c60be18-02f5-44ba-96a5-8724f39c5563",
+      "name": "Code in JavaScript8",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw = $input.item.json.parsedJson;\n\n// 1. Fix internal apostrophes (report's -> report\\'s)\n// We look for letters on both sides of a single quote\nlet sanitized = raw.replace(/([a-zA-Z])'([a-zA-Z])/g, \"$1\\\\'$2\");\n\n// 2. Convert outer single quotes to double quotes\n// This changes {'task': ...} to {\"task\": ...}\nsanitized = sanitized.replace(/'/g, '\"');\n\ntry {\n  const tasks = JSON.parse(sanitized);\n  return tasks.map(t => ({ json: t }));\n} catch (e) {\n  return [{ \n    json: { \n      error: \"JSON still broken\", \n      sanitized_attempt: sanitized,\n      original_error: e.message \n    } \n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -592
+      ],
+      "id": "e9033732-363e-4e16-af84-7be5a791c462",
+      "name": "Code in JavaScript9"
+    },
+    {
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "value": "student_schedule",
+          "mode": "list",
+          "cachedResultName": "student_schedule"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        3328,
+        -688
+      ],
+      "id": "5fd1ecdf-16d6-4b7f-bb96-9db28e197dc0",
+      "name": "Insert rows in a table1",
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bdd175d1-42e4-4a11-8717-c53d6b9e0ac3",
+              "name": "success",
+              "value": "true",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3776,
+        -816
+      ],
+      "id": "0cc5db40-6f23-4d5b-8bc6-5662fc4c471b",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/sync_schedule",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3776,
+        -624
+      ],
+      "id": "5ec7cc78-c1ce-4c60-8c91-ab96b4f994af",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the input array\nconst tasks = $input.all();\n// Get the deadline from your input node (adjust the reference name if needed)\nconst rawDeadline = $('Code in JavaScript6').first().json.lastDate; \n\nfunction toMysqlFormat(dateInput) {\n    const d = new Date(dateInput);\n    const YYYY = d.getFullYear();\n    const MM = String(d.getMonth() + 1).padStart(2, '0');\n    const DD = String(d.getDate()).padStart(2, '0');\n    const HH = String(d.getHours()).padStart(2, '0');\n    const mm = String(d.getMinutes()).padStart(2, '0');\n    const ss = String(d.getSeconds()).padStart(2, '0');\n    return `${YYYY}-${MM}-${DD} ${HH}:${mm}:${ss}`;\n}\n\nconst formattedDeadline = toMysqlFormat(rawDeadline);\n\nreturn tasks.map((item, index) => {\n    const task = item.json;\n    \n    // task_date needs only YYYY-MM-DD\n    const dateOnly = task.start_time.split(' ')[0];\n\n    return {\n        json: {\n            task_name: task.task_name,\n            task_date: dateOnly,\n            start_time: task.start_time,\n            end_time: task.end_time,\n            block_number: index + 1,\n            is_completed: 0,\n            final_submission_date: formattedDeadline\n        }\n    };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        -592
+      ],
+      "id": "ca972492-5e45-4746-bd0b-70baaf3f6916",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "schedule"
+            },
+            {
+              "name": "msg",
+              "value": "I'm currently working on your schedule."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -32,
+        -576
+      ],
+      "id": "c84fd19f-662b-43aa-8fe6-c65a83512e7f",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0b5862f5-77c0-4bde-9563-c8f318ab2cea",
+              "leftValue": "={{ $('External execution').first().json.phone }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -480,
+        -432
+      ],
+      "id": "ad447c95-5664-4e08-ba1d-38d1bf78c1ae",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0b5862f5-77c0-4bde-9563-c8f318ab2cea",
+              "leftValue": "={{ $('External execution').first().json.phone }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1984,
+        -592
+      ],
+      "id": "b1c686a7-5a1c-4ec6-96c0-ccc3f29a182f",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "=jsonList"
+            },
+            {
+              "name": "data",
+              "value": "={{ $json.tasks }}"
+            },
+            {
+              "name": "nextTrigger",
+              "value": "={{ $execution.resumeUrl }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2432,
+        -816
+      ],
+      "id": "ce1b8e71-a7a5-45f6-a370-1ad5999f2456",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all incoming items into a single array\nconst allTasks = items.map(item => item.json);\n\nreturn [{\n  json: {\n    tasks: allTasks\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        -816
+      ],
+      "id": "3a1313ad-f927-4c0d-a475-3c2f27a90a7c",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2656,
+        -816
+      ],
+      "id": "3d6768eb-7ce4-4e24-8259-04e89aed82b2",
+      "name": "Wait",
+      "webhookId": "83a73504-8eb4-4d23-9f8a-28afb11cc915"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3b3770cc-44a9-426a-b798-f799d8d47719",
+              "leftValue": "={{ $json.body.content }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2880,
+        -816
+      ],
+      "id": "8c2a479c-f284-43d1-93dd-372aeb0006e3",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "feedback"
+            },
+            {
+              "name": "msg",
+              "value": "What Would you like to change in the Schedule"
+            },
+            {
+              "name": "nextTrigger",
+              "value": "={{ $execution.resumeUrl }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3104,
+        -816
+      ],
+      "id": "a2b0b931-a134-4ca9-be77-b3e49d7c1a75",
+      "name": "HTTP Request4"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE student_schedule AUTO_INCREMENT = 1;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -448,
+        0
+      ],
+      "id": "a5016c1a-4f53-40cf-8dc2-e0638f65fe28",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3328,
+        -496
+      ],
+      "id": "a46b7c8a-5ec9-4345-bbdd-207f657656b8",
+      "name": "Wait1",
+      "webhookId": "ab6067aa-9a28-4738-b653-f7c2c7837daa"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.93.185.22:8080/n8n_trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "trigger",
+              "value": "=end"
+            },
+            {
+              "name": "msg",
+              "value": "=the database has been updated successfully"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3776,
+        -1008
+      ],
+      "id": "398c40a0-dcfe-451d-a53d-fc04f2628a22",
+      "name": "HTTP Request5"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item => item.json.hasOwnProperty('task_name'));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3104,
+        -1008
+      ],
+      "id": "f97e52dc-0f23-4363-91fa-1ed53a8b0465",
+      "name": "Code in JavaScript10"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "update_data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "e00fdfbd-2d9d-42e2-b89c-ade0a7af20f5",
+      "name": "Webhook",
+      "webhookId": "d5fd3eb2-9ecb-4ea3-b551-b6a9abbd4e32"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "student_schedule",
+          "mode": "list",
+          "cachedResultName": "student_schedule"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        640,
+        -64
+      ],
+      "id": "e0cd7dc0-435e-4dda-9d09-22064a95b325",
+      "name": "Select rows from a table",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "system_config",
+          "mode": "list",
+          "cachedResultName": "system_config"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        656,
+        80
+      ],
+      "id": "c3235250-4aab-4949-ac81-56a3b2a5801e",
+      "name": "Select rows from a table1",
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Current Version",
+        "height": 912,
+        "width": 5424
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -768,
+        -1072
+      ],
+      "typeVersion": 1,
+      "id": "9efafad1-30cf-4ed3-8029-582f558fc0f9",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Settings Updater Webhook",
+        "height": 368,
+        "width": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -208,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "6fcac5ef-2aeb-4d32-bf20-813f8003192c",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Backup for deleting rows",
+        "height": 368,
+        "width": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -752,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "50dccd46-304c-4017-9d1a-b1f359bf14f4",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Checking the data in the tables",
+        "height": 368,
+        "width": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        336,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "a3b99339-6524-4c9e-9231-3089fded9f50",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "17636dce-08d9-4ec7-9414-969c7dea60ae",
+              "leftValue": "={{ $('External execution').first().json.phone }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3552,
+        -736
+      ],
+      "id": "15eef61a-616b-4e85-8ad5-b2a65793b390",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "message"
+            },
+            {
+              "name": "text",
+              "value": "Creating the Schedule"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -32,
+        -384
+      ],
+      "id": "d36d971a-af12-4060-9309-495fb9b7a041",
+      "name": "HTTP Request6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "status"
+            },
+            {
+              "name": "text",
+              "value": "Generating Schedule"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -256,
+        -384
+      ],
+      "id": "6ac9e774-a6b3-469e-8fa2-760f3a1c7aa0",
+      "name": "HTTP Request7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "message"
+            },
+            {
+              "name": "text",
+              "value": "Updating the Schedule in the database"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2432,
+        -528
+      ],
+      "id": "8206216e-620a-4f2c-b57e-7cfe1a2a6285",
+      "name": "HTTP Request8",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "status"
+            },
+            {
+              "name": "text",
+              "value": "Updating Schedule"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2208,
+        -528
+      ],
+      "id": "1a93c7ab-5348-4e69-b979-2fd9205671e8",
+      "name": "HTTP Request9",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "message"
+            },
+            {
+              "name": "text",
+              "value": "Database Updated Successfully"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4224,
+        -624
+      ],
+      "id": "17256a94-50ed-46b4-8ad0-100500c6bb36",
+      "name": "HTTP Request10",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5001/api/trigger",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "status"
+            },
+            {
+              "name": "text",
+              "value": "Updated Successfully"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4000,
+        -624
+      ],
+      "id": "b543940f-cb95-4821-95f4-9d95412e5e35",
+      "name": "HTTP Request11",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": {
+          "__rl": true,
+          "value": "system_config",
+          "mode": "list",
+          "cachedResultName": "system_config"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "id",
+        "valueToMatchOn": "1",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "student_name",
+              "value": "={{ $json.body.student_name }}"
+            },
+            {
+              "column": "current_mode",
+              "value": "={{ $json.body.current_mode }}"
+            },
+            {
+              "column": "support_level",
+              "value": "={{ $json.body.support_level }}"
+            },
+            {
+              "column": "age_group",
+              "value": "={{ $json.body.age_group }}"
+            },
+            {
+              "column": "led_brightness",
+              "value": "={{ $json.body.led_brightness }}"
+            },
+            {
+              "column": "adhd_type",
+              "value": "={{ $json.body.adhd_type }}"
+            },
+            {
+              "column": "DOB",
+              "value": "={{ $json.body.dob }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        80,
+        0
+      ],
+      "id": "9151048c-8778-46df-8519-41d972bb53bf",
+      "name": "Update rows in a table1",
+      "credentials": {
+        "mySql": {
+          "id": "DmW32869g25NvNEY",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.111.120.112:5002/api/speak",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "The database was updated successfully"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4464,
+        -624
+      ],
+      "id": "ffe94429-61e5-4504-983a-9b83c0dae7ea",
+      "name": "HTTP Request12"
+    }
+  ],
+  "connections": {
+    "Delete table or rows": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Select rows from a table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Delete table or rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "External execution": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JS Slot Maker1": {
+      "main": [
+        [
+          {
+            "node": "Draft model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL_select1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript6": {
+      "main": [
+        [
+          {
+            "node": "JS Slot Maker1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript7": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript8": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript9": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table1": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "MySQL_select1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request9",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Insert rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript10",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request4": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Draft model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript10": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Update rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table": {
+      "main": [
+        []
+      ]
+    },
+    "Select rows from a table1": {
+      "main": [
+        []
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request6": {
+      "main": [
+        [
+          {
+            "node": "MySQL_select1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request7": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request8": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request9": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request10": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request11": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "External execution": [
+      {
+        "task_name": "report on different types of solder used in SMD component",
+        "deadline": "2026-05-06T04:00:00.000Z",
+        "number_of_blocks": 14,
+        "block_duration": "1",
+        "phone": false
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a23527dc3c25acf1a0aa7850f9775ecca4d70743200cf35dd3ef15e47337d026"
+  }
+}
